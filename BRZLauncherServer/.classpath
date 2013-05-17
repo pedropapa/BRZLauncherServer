@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/mysql-connector-java-5.1.22-bin.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/google-gson/gson-2.2.2.jar" sourcepath="C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/google-gson/gson-2.2.2-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/google-gson/gson-2.2.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/miglayout/miglayout-4.0-swing.jar" sourcepath="C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/miglayout/miglayout-4.0-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Pedro/Desktop/eclipse_files/BRZLauncherServer/src/BRZLauncherServer/resources/miglayout/miglayout-4.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

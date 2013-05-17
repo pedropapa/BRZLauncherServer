@@ -148,7 +148,7 @@ public class BRZLauncherServer {
 		mysql.query("DELETE FROM competitivo_fila", null);
 		mysql.query("DELETE FROM competitivo_servers", null);
 		
-		System.out.println(Math.round((System.currentTimeMillis() / 1000) + (60 * 5)));
+		//System.out.println(Math.round((System.currentTimeMillis() / 1000) + (60 * 5)));
 		
 		clientOutputStreams 	= new ArrayList<Socket>();
 		ServerSocket serverSock = null;

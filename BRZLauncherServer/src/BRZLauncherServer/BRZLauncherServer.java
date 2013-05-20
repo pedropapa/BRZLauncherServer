@@ -463,7 +463,7 @@ public class BRZLauncherServer {
 														}
 														
 														final serverVars sv = servidor;
-														if(iniciarPartida) {
+														if(iniciarPartida) { 
 															timer.schedule(new TimerTask() {
 																@Override
 																public void run() {

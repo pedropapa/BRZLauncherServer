@@ -1,7 +1,11 @@
 package BRZLauncherServer;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -31,7 +35,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.Date;
+
+import javax.swing.JOptionPane;
 
 import com.google.gson.Gson;
 
@@ -48,6 +56,10 @@ public class BRZLauncherServer {
 	public static String brzLauncherUrl											= "http://samp.brazucas-server.com/BRZLauncher.php";
 	public static String brzUrlAPI												= "http://samp.brazucas-server.com/api.php?";
 	public static String servidorVersao											= "0.1a R1";
+	public static String DigitalOcean_clientId									= "iaCzvk978IthbxOotLr1l";
+	public static String DigitalOcean_apiKey									= "ZcsNAkxd3qymQz0OrDrZGncrNjtENF2bTomkDjmpw";
+	public static String DigitalOcean_urlApi									= "https://api.digitalocean.com/%s/?client_id="+DigitalOcean_clientId+"&api_key="+DigitalOcean_apiKey;
+	public static String tempFolder												= System.getProperty("java.io.tmpdir");
 	
 	public static void main(String[] args) throws IOException {
 		MySQLConn = new mysql();
@@ -142,6 +154,53 @@ public class BRZLauncherServer {
 		System.out.println("Atualizando IP do servidor principal na API...");
 		((new URL(BRZLauncherServer.brzUrlAPI+"a=updateMasterIp")).openStream()).close();
 	}
+	
+	@SuppressWarnings("resource")
+	public static boolean abrirNovoServidor() {
+    	try {
+	    	System.out.println("Extraindo servidor....");
+	    	InputStream servidorPath = BRZLauncherServer.class.getResourceAsStream("resources/Servidor/servidor.zip");
+
+	    	File unzipDestinationDirectory = new File(tempFolder);
+	    	unzipDestinationDirectory.deleteOnExit();
+	    	
+	    	ZipInputStream zipFile = new ZipInputStream(servidorPath);
+	    	byte[] buffer = new byte[2048];
+	    	
+	    	ZipEntry entry;
+	    	while((entry = zipFile.getNextEntry()) != null) {	    			    		
+	    		String currentEntry = entry.getName();
+	    		File destFile = new File(unzipDestinationDirectory, currentEntry);
+	    		File destinationParent = destFile.getParentFile();
+	    		destinationParent.mkdirs();
+
+	    		if(!entry.isDirectory()) {	    			
+	    			FileOutputStream fos 		= new FileOutputStream(destFile);
+	    			BufferedOutputStream dest 	= new BufferedOutputStream(fos, 2048);
+	    			
+	                int len = 0;
+	                
+	                while ((len = zipFile.read(buffer)) > 0)
+	                {
+	                	dest.write(buffer, 0, len);
+	                }
+	    			
+	    			dest.flush();
+	    			dest.close();
+	    			fos.close();
+	    		}
+	    	}
+	    	
+	    	zipFile.close();
+	    	System.out.println("Servidor extraído.");
+	    	//portforward();
+	    	//JOptionPane.showMessageDialog(BRZLauncher.frame, "Servidor extraído.");
+    	} catch (IOException e) {
+    		e.printStackTrace();
+    	}
+    	
+    	return true;
+    }
 	
 	public static void go() {
 		mysql.query("UPDATE competitivo_contas SET LOGADO = 0", null);
@@ -332,7 +391,7 @@ public class BRZLauncherServer {
 										String porta 			= VARS.get("port");
 										String server_nome 		= VARS.get("nome");
 										String server_senha		= VARS.get("senha");
-										String servidorVersao	= VARS.get("servidorVersao");
+										String servidorVersao	= VARS.get("versao");
 										port 					= Integer.valueOf(porta);
 										
 										if(servidoresConectados.get(ip+":"+porta) != null) {
@@ -757,7 +816,7 @@ public class BRZLauncherServer {
 					
 					jogadores.add(jog.NICK);
 					
-					if(/*j == n && */1 == 1) {
+					if(j == n && 1 == 1) {
 						if(partidas.get(query2.getInt("ID")) != null) {
 							partidas.remove(query2.getInt("ID"));
 						}

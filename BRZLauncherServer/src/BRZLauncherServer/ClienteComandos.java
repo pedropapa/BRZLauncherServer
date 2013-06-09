@@ -84,8 +84,8 @@ public class ClienteComandos extends Gaia {
 								} catch (NoSuchAlgorithmException e) {
 									e.printStackTrace();
 								}
-	
-								this.Gaia.Servidor.jogadoresConectados.put(nick, new JogadorVars(nick, "logado", sock, md5, competitivo_dados));
+									
+								this.Gaia.Servidor.jogadoresConectados.put(md5, new JogadorVars(nick, "logado", sock, md5, competitivo_dados));
 			                }
 			            break;
 			        }
@@ -95,9 +95,13 @@ public class ClienteComandos extends Gaia {
 		        }
 		    break;
 			default:
-				jog = this.Gaia.Servidor.jogadoresConectados.get(nick);
 	            chave = VARS.get("c");
+	            jog = this.Gaia.Servidor.jogadoresConectados.get(chave);
 	            //ResultSet competitivo = mysql.query("SELECT * FROM competitivo_contas WHERE CHAVE_AUTH=? AND IP=? LIMIT 0,1", new String[] {chave, ip});
+	            
+	            if(jog == null) {
+	            	System.out.println("teste "+nick);
+	            }
 	            
 	            if(jog != null && jog.chave.equals(chave)) {
 	                nick = jog.NICK;
@@ -106,7 +110,7 @@ public class ClienteComandos extends Gaia {
 	                    case "inicializar":
 	                    	output = this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=inicializar"));
 	                    	
-	                    	JogadorVars info = this.Gaia.Servidor.jogadoresConectados.get(nick);
+	                    	JogadorVars info = this.Gaia.Servidor.jogadoresConectados.get(chave);
 	                    	this.Gaia.Servidor.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=inserir&NICK="+info.NICK+"&STATUS="+info.STATUS)), null);
 	                    	
 	                    	this.Gaia.Dao.query("UPDATE competitivo_contas SET LOGADO=1 WHERE NICK=?", new String[] {nick});
@@ -145,7 +149,7 @@ public class ClienteComandos extends Gaia {
 		                            	this.Gaia.Servidor.enviarParaCliente(jog.sock, this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=abrirServidor")));
 		                            }
 		                            
-		                            this.Gaia.Servidor.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=inserir&NICK="+nick+"&STATUS="+this.Gaia.Servidor.jogadoresConectados.get(nick).STATUS)), null);
+		                            this.Gaia.Servidor.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=inserir&NICK="+nick+"&STATUS="+this.Gaia.Servidor.jogadoresConectados.get(chave).STATUS)), null);
 		                            
 		                            output = this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=filaStatus&MENSAGEM=Aguardando formação de partida..."));
 	                    		} else {
@@ -172,7 +176,9 @@ public class ClienteComandos extends Gaia {
 	    						String[] jogs = servidorUtilizado.JOGADORES_LISTA.split(",");
 	    						
 	    						for(String j : jogs) {
-	    							JogadorVars vjog = this.Gaia.Servidor.jogadoresConectados.get(j);
+	    							String[] i = j.split("\\|");
+	    							
+	    							JogadorVars vjog = this.Gaia.Servidor.jogadoresConectados.get(i[1]);
 	    							vjog.STATUS 	= "logado";
 	    			            	vjog.modo 	= null;
 	    			            	
@@ -211,10 +217,10 @@ public class ClienteComandos extends Gaia {
 	                    	this.Gaia.Servidor.propagarServidores();
 	                    break;
 	                    case "confirmarPronto":
-	                    	PartidaVars jogPartidaInfo 				= this.Gaia.partidas.get(jog.servidorJogando).get(jog.NICK);
+	                    	PartidaVars jogPartidaInfo 				= this.Gaia.partidas.get(jog.servidorJogando).get(jog.chave);
 	                    	HashMap<String, PartidaVars> partida 	= this.Gaia.partidas.get(jog.servidorJogando);
 	                    	boolean comecarPartida 					= true;
-	                    	String jogadorNick						= null;
+	                    	String jogadorChave						= null;
 	                    	PartidaVars pInfo						= null;
 	                    	
 	                    	if(!jogPartidaInfo.pronto) {
@@ -243,9 +249,9 @@ public class ClienteComandos extends Gaia {
 	                        		while(iter.hasNext()) {
 	                        			Entry<String, PartidaVars> entry 	= iter.next();
 	                        			pInfo 								= entry.getValue();
-	                        			jogadorNick							= entry.getKey();
+	                        			jogadorChave						= entry.getKey();
 	                        			
-	                        			JogadorVars jogador = this.Gaia.Servidor.jogadoresConectados.get(jogadorNick);
+	                        			JogadorVars jogador = this.Gaia.Servidor.jogadoresConectados.get(jogadorChave);
 	                        			jogador.STATUS = "jogando"; // Em jogo
 	                        			
 	                        			this.Gaia.Servidor.enviarParaCliente(jogador.sock, this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=entrarServer&IP="+jogador.servidorIP+"&SENHA="+jogServer.SENHA)));

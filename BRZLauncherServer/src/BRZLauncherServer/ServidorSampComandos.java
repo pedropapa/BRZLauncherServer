@@ -93,6 +93,11 @@ public class ServidorSampComandos extends Gaia {
 							}
 						break;
 						case "playerAuth":
+							/**
+							 * TODO
+							 * Código descontinuado, passado para o próprio GM na callback "OnPlayerConnect"
+							 */
+							
 							jog = this.Gaia.Servidor.jogadoresConectados.get(VARS.get("pl"));
 							
 							if(server.JOGADORES_LISTA.contains(VARS.get("pl"))) {
@@ -104,7 +109,7 @@ public class ServidorSampComandos extends Gaia {
 								boolean iniciarPartida = true;
 								
 								for(String jo : server.JOGADORES_LISTA.split(",")) {
-									if(!this.Gaia.Servidor.jogadoresConectados.get(jo).autenticado) {
+									if(!this.Gaia.Servidor.jogadoresConectados.get(jo.split("\\|")[1]).autenticado) {
 										iniciarPartida = false;
 									}
 								}
@@ -126,6 +131,11 @@ public class ServidorSampComandos extends Gaia {
 							}
 						break;
 						case "playerDisconnect":
+							/**
+							 * TODO
+							 * Código descontinuado, passado para o próprio GM na callback "OnPlayerConnect"
+							 */
+							
 							if(server.JOGADORES_LISTA != null && server.JOGADORES_LISTA.contains(VARS.get("pl"))) {
 								switch(Integer.valueOf(VARS.get("ra"))) {
 									case 0: // Timed out
@@ -148,8 +158,11 @@ public class ServidorSampComandos extends Gaia {
 						case "fimPartida":
 							int timeVencedor = Integer.valueOf(VARS.get("timeVenceu"));
 							
-							for(String jogadorNick : server.JOGADORES_LISTA.split(",")) {
-								JogadorVars jogadorDados = this.Gaia.Servidor.jogadoresConectados.get(jogadorNick);
+							for(String jogadorInfo : server.JOGADORES_LISTA.split(",")) {
+								String jogadorChave = jogadorInfo.split("\\|")[1];
+								String jogadorNick	= jogadorInfo.split("\\|")[0];
+						
+								JogadorVars jogadorDados = this.Gaia.Servidor.jogadoresConectados.get(jogadorChave);
 								
 								if(jogadorDados.situacao == 1) {
 									this.Gaia.Dao.query("UPDATE competitivo_contas SET JOGOS = JOGOS + 1, VITORIAS = VITORIAS + if(? = ?, 1, 0) WHERE NICK = ?", new String[] {jogadorDados.time+"", timeVencedor+"", jogadorNick});

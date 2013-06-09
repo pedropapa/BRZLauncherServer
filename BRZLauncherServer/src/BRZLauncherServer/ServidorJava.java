@@ -17,7 +17,7 @@ import java.util.zip.ZipInputStream;
 import BRZLauncherServer.Variaveis.JogadorVars;
 import BRZLauncherServer.Variaveis.ServerVars;
 
-public class Servidor extends Gaia {
+public class ServidorJava extends Gaia {
 	// Referência da class principal
 	private Gaia Gaia = null;
 		
@@ -25,7 +25,7 @@ public class Servidor extends Gaia {
 	public HashMap<String, JogadorVars> jogadoresConectados 	= new HashMap<String, JogadorVars>();
 	public HashMap<String, ServerVars> servidoresConectados 	= new HashMap<String, ServerVars>();
 	
-	public Servidor(Gaia g) {
+	public ServidorJava(Gaia g) {
 		this.Gaia = g;
 	}
 	
@@ -160,7 +160,9 @@ public class Servidor extends Gaia {
 				String[] jogs = serverInfo.JOGADORES_LISTA.split(",");
 				
 				for(String j : jogs) {
-					jog = this.jogadoresConectados.get(j);
+					String[] i = j.split("\\|");
+					
+					jog = this.jogadoresConectados.get(i[1]);
 					
 					if(jog != null) {
 						jog.STATUS 	= "logado";
@@ -204,16 +206,18 @@ public class Servidor extends Gaia {
 		this.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulServers&disponiveis="+servidoresDisponiveis+"&totais="+servidoresTotais)), null);
 	}
 	
-	public void desconectarJogador(String nick) throws SQLException, IOException {
-		if(this.jogadoresConectados.get(nick) != null) {
-		    Dao.query("UPDATE competitivo_contas SET LOGADO=0, CHAVE_AUTH='' WHERE NICK=?", new String[] {nick});
-		    Dao.query("DELETE FROM competitivo_fila WHERE NICK=?", new String[] {nick});
-		    Dao.query("DELETE FROM competitivo_atualizacoes WHERE NICK=?", new String[] {nick});
+	public void desconectarJogador(String chave) throws SQLException, IOException {
+		JogadorVars jog = this.jogadoresConectados.get(chave);
+				
+		if(jog != null) {
+		    Dao.query("UPDATE competitivo_contas SET LOGADO=0, CHAVE_AUTH='' WHERE NICK=?", new String[] {jog.NICK});
+		    Dao.query("DELETE FROM competitivo_fila WHERE NICK=?", new String[] {jog.NICK});
+		    Dao.query("DELETE FROM competitivo_atualizacoes WHERE NICK=?", new String[] {jog.NICK});
 		    
-		    enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=remover&NICK="+nick)), null);
-		    enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=chatMsg&NICK="+nick+"&TIPO=3&MENSAGEM="+this.Gaia.Utils.encodeURIComponent(nick+" saiu do chat."))), null);
+		    enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=remover&NICK="+jog.NICK)), null);
+		    enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=chatMsg&NICK="+jog.NICK+"&TIPO=3&MENSAGEM="+this.Gaia.Utils.encodeURIComponent(jog.NICK+" saiu do chat."))), null);
 		    
-		    this.jogadoresConectados.remove(nick);
+		    this.jogadoresConectados.remove(chave);
 		}
 	}
 }

@@ -3,7 +3,7 @@ package BRZLauncherServer;
 import java.io.IOException;
 import java.net.Socket;
 
-public class TestarServidor extends Servidor implements Runnable {
+public class TestarServidor extends ServidorJava implements Runnable {
 	public TestarServidor(Gaia g) {
 		super(g);
 	}

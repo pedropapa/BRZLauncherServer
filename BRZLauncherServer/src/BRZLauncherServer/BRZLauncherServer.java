@@ -8,7 +8,7 @@ public class BRZLauncherServer {
 		
 		g.Dao 			= new Mysql(g);
 		g.Api 			= new Api(g);
-		g.Servidor 		= new Servidor(g);
+		g.Servidor 		= new ServidorJava(g);
 		g.Utils 		= new Utils(g);
 		g.Cliente		= new ClienteComandos(g);
 		g.ServidorSamp 	= new ServidorSampComandos(g);

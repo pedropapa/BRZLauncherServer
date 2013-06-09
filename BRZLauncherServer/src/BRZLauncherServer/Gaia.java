@@ -26,7 +26,7 @@ public class Gaia {
 	public Mysql Dao 							= null;
 	public Api Api 								= null;
 	public Utils Utils 							= null;
-	public Servidor Servidor 					= null;
+	public ServidorJava Servidor 				= null;
 	public ClienteComandos Cliente				= null;
 	public ServidorSampComandos ServidorSamp 	= null;
 	
@@ -120,13 +120,14 @@ public class Gaia {
 			String resposta 			= "";
 			String ip 					= sock.getInetAddress().getHostAddress();
 			String nick					= null;
+			String jogChave				= null;
 			int port					= 0;
 			
 			try {
 				while((resposta = reader.readLine()) != null) {
 					System.out.println("[" + Utils.dataHora() + "] Comando recebido de "+ip+": "+resposta);
-					HashMap<String, String> VARS = Utils.tratar(resposta);
-					String 		output			= "";
+					HashMap<String, String> VARS 	= Utils.tratar(resposta);
+					String 	output					= "";
 					
 					if(VARS.get("t") != null && VARS.get("a") != null) {
 						switch(VARS.get("t")) {
@@ -138,6 +139,12 @@ public class Gaia {
 							case "cliente":
 								// Comandos enviado pelos Clientes Java
 					            output = Cliente.filtrar(VARS, sock);
+					            
+					            JogadorVars jog = Servidor.jogadoresConectados.get(VARS.get("c"));
+					            if(jog != null) {
+					            	nick 		= jog.NICK;
+					            	jogChave 	= jog.chave;
+					            }
 				            break;
 						}
 					}
@@ -152,11 +159,11 @@ public class Gaia {
 			} catch (IOException | SQLException e) {
 				//e.printStackTrace();
 				
-				if(Servidor.jogadoresConectados.get(nick) != null) {
+				if(nick != null) {
 					System.out.println("Conexão perdida com o cliente "+ip+" ("+nick+")");
 					
 					try {
-						Servidor.desconectarJogador(nick);
+						Servidor.desconectarJogador(jogChave);
 					} catch (SQLException | IOException e1) {
 						System.out.println("Não foi possível deslogar o jogador "+nick+".");
 					}
@@ -186,7 +193,7 @@ public class Gaia {
 			List<String> jogadores = new ArrayList<String>();
 			String[] jogadoresArray = new String[Servidor.jogadoresConectados.size()];
 			
-			query = Dao.query("SELECT * FROM competitivo_fila WHERE MODO = ? ORDER BY TIMESTAMP DESC", new String[] {modo});
+			query = Dao.query("SELECT * FROM competitivo_fila F, competitivo_contas C WHERE F.MODO = ? AND F.NICK = C.NICK ORDER BY TIMESTAMP DESC", new String[] {modo});
 			
 			Matcher r 	= (Pattern.compile("x(\\d+)")).matcher(modo);
 			r.find();
@@ -194,14 +201,14 @@ public class Gaia {
 			
 			int j = 0;
 			while(query.next()) {
-				JogadorVars jog = Servidor.jogadoresConectados.get(query.getString("NICK"));
+				JogadorVars jog = Servidor.jogadoresConectados.get(query.getString("CHAVE_AUTH"));
 				
 				if(jog != null) {
-					jogadoresArray[j] = jog.NICK;
+					jogadoresArray[j] = jog.NICK+"|"+jog.chave;
 					
 					++j;
 					
-					jogadores.add(jog.NICK);
+					jogadores.add(jog.chave);
 					
 					if(/*j == n && */1 == 1) {
 						if(partidas.get(query2.getInt("ID")) != null) {
@@ -224,11 +231,11 @@ public class Gaia {
 
 							if(++h % 2 != 0) { // Time A
 								timeA += jog.NICK + "\n";
-								partidas.get(query2.getInt("ID")).put(jog.NICK, new PartidaVars("TimeA"));
+								partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeA"));
 								jog.time = 0;
 							} else { // Time B
 								timeB += jog.NICK + "\n";
-								partidas.get(query2.getInt("ID")).put(jog.NICK, new PartidaVars("TimeB"));
+								partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeB"));
 								jog.time = 1;
 							}
 							
@@ -237,7 +244,12 @@ public class Gaia {
 							jog.servidorJogando = servidorJogando;
 							jog.servidorIP		= servidorIP;
 							
-							Servidor.enviarParaCliente(jog.sock, Utils.json.toJson(Utils.tratar("funcao=partidaFormada&jogadores="+ Utils.implodeArray(jogadoresArray, ",") + "&partidaid="+servidorJogando+"&NICK="+jog.NICK)));
+							String[] jogadoresLista = new String[Servidor.jogadoresConectados.size()];
+							for(String u : jogadoresArray) {
+								jogadoresLista[jogadoresLista.length - 1] = u.split("\\|")[0];
+							}
+							
+							Servidor.enviarParaCliente(jog.sock, Utils.json.toJson(Utils.tratar("funcao=partidaFormada&jogadores="+ Utils.implodeArray(jogadoresLista, ",") + "&partidaid="+servidorJogando+"&NICK="+jog.NICK)));
 						}
 						
 						ServerVars servidorUtilizado 			= Servidor.servidoresConectados.get(query2.getString("IP")+":"+query2.getString("PORTA"));
@@ -245,7 +257,7 @@ public class Gaia {
 						servidorUtilizado.JOGADORES_CONECTADOS 	= j;
 						servidorUtilizado.JOGADORES_LISTA 		= Utils.implodeArray(jogadoresArray, ",");
 						
-						Servidor.enviarParaServidor(servidorUtilizado.IP + ":" + servidorUtilizado.PORT, "a=TJ&LA="+timeA.replaceAll("\n", ",")+"&LB="+timeB.replaceAll("\n", ","));
+						Servidor.enviarParaServidor(servidorUtilizado.IP + ":" + servidorUtilizado.PORT, "a=TJ&LA="+timeA.replaceAll("\n", ",")+"&LB="+timeB.replaceAll("\n", ",")+"&PT="+(n/2));
 						
 						Dao.query("UPDATE competitivo_servers SET STATUS = 2, TIME1_PLAYERS = ?, TIME2_PLAYERS = ?, PARTIDA_TIPO = ? WHERE ID = ?", new String[] {timeA, timeB, modo, query2.getInt("ID") + ""});
 

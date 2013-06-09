@@ -11,6 +11,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import BRZLauncherServer.Variaveis.ApiRespVars;
+import BRZLauncherServer.Variaveis.JogadorVars;
+import BRZLauncherServer.Variaveis.PartidaVars;
+import BRZLauncherServer.Variaveis.ServerVars;
+
 public class ClienteComandos extends Gaia {
 	private Gaia Gaia = null;
 	
@@ -37,7 +42,7 @@ public class ClienteComandos extends Gaia {
 		        	output = this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("status=1&target=error&html=Preencha todos os campos"));
 		        } else {
 			        String request 	= this.Gaia.Api.Request("a=login&u="+nick+"&s="+senha);
-			        ApiResp resp 	= this.Gaia.Utils.json.fromJson(request, ApiResp.class);
+			        ApiRespVars resp 	= this.Gaia.Utils.json.fromJson(request, ApiRespVars.class);
 	
 			        switch(resp.CODIGO) {
 			            case 1: //Login efetuado

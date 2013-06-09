@@ -1,4 +1,4 @@
-package BRZLauncherServer;
+package BRZLauncherServer.Variaveis;
 
 import java.io.IOException;
 

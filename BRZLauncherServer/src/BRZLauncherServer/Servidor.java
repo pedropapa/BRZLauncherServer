@@ -14,6 +14,9 @@ import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import BRZLauncherServer.Variaveis.JogadorVars;
+import BRZLauncherServer.Variaveis.ServerVars;
+
 public class Servidor extends Gaia {
 	// Referência da class principal
 	private Gaia Gaia = null;

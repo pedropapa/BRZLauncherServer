@@ -10,6 +10,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.TimerTask;
 
+import BRZLauncherServer.Variaveis.JogadorVars;
+import BRZLauncherServer.Variaveis.ServerVars;
+
 public class ServidorSampComandos extends Gaia {
 	private Gaia Gaia = null;
 	

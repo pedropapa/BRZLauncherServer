@@ -103,7 +103,7 @@ public class ClienteComandos extends Gaia {
 	            	System.out.println("teste "+nick);
 	            }
 	            
-	            if(jog != null && jog.chave.equals(chave)) {
+	            if(jog != null && jog.chave.equals(chave) && jog.sock.isConnected()) {
 	                nick = jog.NICK;
 	
 	                switch(VARS.get("a")) {

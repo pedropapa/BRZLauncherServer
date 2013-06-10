@@ -97,8 +97,8 @@ public class Utils extends Gaia {
 	    return result;
 	}
 	
-	public String GerarString(int tipo, int tamanho) {
-	    String letras     	= "abcdefghijklmnopqrstuvxz";
+	public String GerarString(int tipo, int tamanho, boolean salt) {
+		String letras     	= "abcdefghijklmnopqrstuvxz";
 	    String numeros    	= "0123456789";
 	    String output     	= "";
 	    String chars		= "";
@@ -119,6 +119,10 @@ public class Utils extends Gaia {
 	        output += chars.charAt(new Random().nextInt(chars.length()));
 	    
 	    // Salt
-	    return "BRz_kuZn3tS0v?"+output;
+	    return (salt)?"BRz_kuZn3tS0v?"+output:output;
+	}
+	
+	public String GerarString(int tipo, int tamanho) {
+		return GerarString(tipo, tamanho, true);
 	}
 }

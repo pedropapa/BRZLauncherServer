@@ -31,7 +31,8 @@ public class ServidorJava extends Gaia {
 	
 	public boolean abrirNovoServidor() {
     	try {
-	    	System.out.println("Extraindo servidor....");
+    		String serverNome = this.Gaia.Utils.GerarString(3, 5, false);
+    		
 	    	InputStream servidorPath = BRZLauncherServer.class.getResourceAsStream("resources/Servidor/servidor.zip");
 
 	    	File unzipDestinationDirectory = new File(this.Gaia.Utils.tempFolder);
@@ -41,9 +42,10 @@ public class ServidorJava extends Gaia {
 	    	byte[] buffer = new byte[2048];
 	    	
 	    	ZipEntry entry;
-	    	while((entry = zipFile.getNextEntry()) != null) {	    			    		
+	    	while((entry = zipFile.getNextEntry()) != null) {
 	    		String currentEntry = entry.getName();
-	    		File destFile = new File(unzipDestinationDirectory, currentEntry);
+	    		// System.getProperty("java.io.tmpdir")  "/home/brazucas/samp/Competitivo/Servers/"+serverNome
+	    		File destFile = new File("/home/brazucas/samp/Competitivo/Servers/"+serverNome, currentEntry);
 	    		File destinationParent = destFile.getParentFile();
 	    		destinationParent.mkdirs();
 
@@ -53,8 +55,7 @@ public class ServidorJava extends Gaia {
 	    			
 	                int len = 0;
 	                
-	                while ((len = zipFile.read(buffer)) > 0)
-	                {
+	                while ((len = zipFile.read(buffer)) > 0) {
 	                	dest.write(buffer, 0, len);
 	                }
 	    			
@@ -65,9 +66,6 @@ public class ServidorJava extends Gaia {
 	    	}
 	    	
 	    	zipFile.close();
-	    	System.out.println("Servidor extraído.");
-	    	//portforward();
-	    	//JOptionPane.showMessageDialog(BRZLauncher.frame, "Servidor extraído.");
     	} catch (IOException e) {
     		e.printStackTrace();
     	}

@@ -47,6 +47,7 @@ public class Gaia {
 	
 	public void init() throws IOException {
 		this.Api.atualizarMasterIP();
+		this.Servidor.abrirNovoServidor();
 		go();
 	}
 	

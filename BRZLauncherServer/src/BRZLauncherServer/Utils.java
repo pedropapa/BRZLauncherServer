@@ -4,10 +4,16 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.security.Key;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Random;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+
+import sun.misc.*;
 
 import com.google.gson.Gson;
 
@@ -22,6 +28,7 @@ public class Utils extends Gaia {
 	// Variáveis locais
 	public Gson json 			= new Gson();
 	public String tempFolder 	= System.getProperty("java.io.tmpdir");
+	public AESencrp AESencrp 	= new AESencrp();
 	
 	public HashMap<String, String> tratar(String parametros) {
 		HashMap<String, String> GET = new HashMap<String, String>();
@@ -124,5 +131,33 @@ public class Utils extends Gaia {
 	
 	public String GerarString(int tipo, int tamanho) {
 		return GerarString(tipo, tamanho, true);
+	}
+	
+	public class AESencrp {
+		private final String ALGO = "AES";
+	    private final byte[] keyValue = new byte[] {'p','@','P','@','D','0','p','0','L','1','s','0','0','0','1','9'};
+
+		public String encrypt(String Data) throws Exception {
+		        Key key = generateKey();
+		        Cipher c = Cipher.getInstance(ALGO);
+		        c.init(Cipher.ENCRYPT_MODE, key);
+		        byte[] encVal = c.doFinal(Data.getBytes());
+		        String encryptedValue = new BASE64Encoder().encode(encVal);
+		        return encryptedValue;
+		    }
+	
+		    public String decrypt(String encryptedData) throws Exception {
+		        Key key = generateKey();
+		        Cipher c = Cipher.getInstance(ALGO);
+		        c.init(Cipher.DECRYPT_MODE, key);
+		        byte[] decordedValue = new BASE64Decoder().decodeBuffer(encryptedData);
+		        byte[] decValue = c.doFinal(decordedValue);
+		        String decryptedValue = new String(decValue);
+		        return decryptedValue;
+		    }
+		    private Key generateKey() throws Exception {
+		        Key key = new SecretKeySpec(keyValue, ALGO);
+		        return key;
+		}
 	}
 }

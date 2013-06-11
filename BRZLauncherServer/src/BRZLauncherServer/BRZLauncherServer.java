@@ -1,9 +1,7 @@
 package BRZLauncherServer;
 
-import java.io.IOException;
-
 public class BRZLauncherServer {
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		Gaia g = new Gaia();
 		
 		g.Dao 			= new Mysql(g);

@@ -18,6 +18,7 @@ import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import BRZLauncherServer.Utils.AESencrp;
 import BRZLauncherServer.Variaveis.JogadorVars;
 import BRZLauncherServer.Variaveis.PartidaVars;
 import BRZLauncherServer.Variaveis.ServerVars;
@@ -29,6 +30,7 @@ public class Gaia {
 	public ServidorJava Servidor 				= null;
 	public ClienteComandos Cliente				= null;
 	public ServidorSampComandos ServidorSamp 	= null;
+	public AESencrp C 							= this.Utils.AESencrp;
 	
 	// Variáveis locais
 	public boolean COMPETITIVO_LIBERADO 								= true;
@@ -45,9 +47,9 @@ public class Gaia {
 		return this.Utils;
 	}
 	
-	public void init() throws IOException {
+	public void init() throws Exception {		
 		this.Api.atualizarMasterIP();
-		this.Servidor.abrirNovoServidor();
+		//this.Servidor.abrirNovoServidor();
 		go();
 	}
 	
@@ -88,7 +90,7 @@ public class Gaia {
 		}
 	}
 	
-	public class ClientHandler implements Runnable {
+	public class ClientHandler extends Gaia implements Runnable {
 		BufferedReader 	reader 	= null;
 		Socket 			sock 	= null;
 		PrintWriter		writer 	= null;
@@ -127,7 +129,7 @@ public class Gaia {
 			try {
 				while((resposta = reader.readLine()) != null) {
 					System.out.println("[" + Utils.dataHora() + "] Comando recebido de "+ip+": "+resposta);
-					HashMap<String, String> VARS 	= Utils.tratar(resposta);
+					HashMap<String, String> VARS 	= Utils.tratar(super.C.decrypt(resposta));
 					String 	output					= "";
 					
 					if(VARS.get("t") != null && VARS.get("a") != null) {
@@ -151,13 +153,13 @@ public class Gaia {
 					}
 					
 					if(output != null && output.length() > 0) {
-						writer.println(output);
+						writer.println(super.C.encrypt(output));
 						writer.flush();
 						
 						System.out.println("[" + Utils.dataHora() + "] Comando enviado para "+ip+": "+output);
 					}
 				}
-			} catch (IOException | SQLException e) {
+			} catch (Exception e) {
 				//e.printStackTrace();
 				
 				if(nick != null) {

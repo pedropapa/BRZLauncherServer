@@ -87,7 +87,7 @@ public class ServidorJava extends Gaia {
 						
 						if(sock.isConnected()) {
 							writer = new PrintWriter(sock.getOutputStream());
-							writer.println(message);
+							writer.println(this.Gaia.C.encrypt(message));
 							writer.flush();
 						}
 					} catch (Exception ex) {
@@ -105,7 +105,7 @@ public class ServidorJava extends Gaia {
 			try {
 				if(sock.isConnected()) {
 					writer = new PrintWriter(sock.getOutputStream());
-					writer.println(message);
+					writer.println(this.Gaia.C.encrypt(message));
 					writer.flush();
 					
 					System.out.println("[" + this.Gaia.Utils.dataHora() + "] Comando enviado para "+sock.getInetAddress().getHostAddress()+": "+message);
@@ -125,7 +125,7 @@ public class ServidorJava extends Gaia {
 			try {
 				if(sock.isConnected()) {
 					writer = new PrintWriter(sock.getOutputStream());
-					writer.println(message);
+					writer.println(this.Gaia.C.encrypt(message));
 					writer.flush();
 					
 					System.out.println("[" + this.Gaia.Utils.dataHora() + "] Comando enviado para "+sock.getInetAddress().getHostAddress()+": "+message);
@@ -207,7 +207,7 @@ public class ServidorJava extends Gaia {
 	public void desconectarJogador(String chave) throws SQLException, IOException {
 		JogadorVars jog = this.jogadoresConectados.get(chave);
 				
-		if(jog != null) {
+		if(jog != null && jog.sock.isConnected()) {
 		    Dao.query("UPDATE competitivo_contas SET LOGADO=0, CHAVE_AUTH='' WHERE NICK=?", new String[] {jog.NICK});
 		    Dao.query("DELETE FROM competitivo_fila WHERE NICK=?", new String[] {jog.NICK});
 		    Dao.query("DELETE FROM competitivo_atualizacoes WHERE NICK=?", new String[] {jog.NICK});

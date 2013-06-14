@@ -1,9 +1,6 @@
 package BRZLauncherServer;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.ResultSet;
@@ -24,13 +21,14 @@ import BRZLauncherServer.Variaveis.PartidaVars;
 import BRZLauncherServer.Variaveis.ServerVars;
 
 public class Gaia {	
+	// Referências
 	public Mysql Dao 							= null;
 	public Api Api 								= null;
 	public Utils Utils 							= null;
 	public ServidorJava Servidor 				= null;
 	public ClienteComandos Cliente				= null;
 	public ServidorSampComandos ServidorSamp 	= null;
-	public AESencrp C 							= this.Utils.AESencrp;
+	public AESencrp C 							= null;
 	
 	// Variáveis locais
 	public boolean COMPETITIVO_LIBERADO 								= true;
@@ -43,11 +41,14 @@ public class Gaia {
 	public String DigitalOcean_apiKey									= "ZcsNAkxd3qymQz0OrDrZGncrNjtENF2bTomkDjmpw";
 	public String DigitalOcean_urlApi									= "https://api.digitalocean.com/%s/?client_id="+DigitalOcean_clientId+"&api_key="+DigitalOcean_apiKey;
 	
+	// Constantes
+	public int quantidade_total_servidores = 20;
+	
 	public Utils Utils() {
 		return this.Utils;
 	}
 	
-	public void init() throws Exception {		
+	public void init() throws Exception {
 		this.Api.atualizarMasterIP();
 		//this.Servidor.abrirNovoServidor();
 		go();
@@ -57,6 +58,7 @@ public class Gaia {
 		Dao.query("UPDATE competitivo_contas SET LOGADO = 0", null);
 		Dao.query("DELETE FROM competitivo_fila", null);
 		Dao.query("DELETE FROM competitivo_servers", null);
+		Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 0", null);
 		
 		//System.out.println(Math.round((System.currentTimeMillis() / 1000) + (60 * 5)));
 		
@@ -72,7 +74,7 @@ public class Gaia {
 				Socket clientSocket = serverSock.accept();
 				//clientSocket.setSoTimeout(60000);
 				clientOutputStreams.add(clientSocket);
-				Thread t = new Thread(new ClientHandler(clientSocket));
+				Thread t = new Thread(new ClienteThread(this, clientSocket));
 				t.start();
 				
 				System.out.println("Nova conexão vinda de: "+clientSocket.getInetAddress().getHostAddress());
@@ -90,113 +92,44 @@ public class Gaia {
 		}
 	}
 	
-	public class ClientHandler extends Gaia implements Runnable {
-		BufferedReader 	reader 	= null;
-		Socket 			sock 	= null;
-		PrintWriter		writer 	= null;
+	public class rotinaPartidas extends Gaia implements Runnable {
+		private Gaia Gaia = null;
 		
-		public ClientHandler(Socket clientSocket) {
-			try {
-				sock 						= clientSocket;
-				InputStreamReader isReader 	= new InputStreamReader(sock.getInputStream());
-				reader 						= new BufferedReader(isReader);
-				writer 						= new PrintWriter(sock.getOutputStream());
-				
-				timer.scheduleAtFixedRate(new TimerTask() {
-					@Override
-					public void run() {
-						try {
-							formarPartidas("x1");
-							formarPartidas("x3");
-							formarPartidas("x5");
-						} catch (SQLException | IOException e) {
-							e.printStackTrace();
-						}
-					}
-				}, 0, 15*1000);
-			} catch(Exception ex) {
-				ex.printStackTrace();
-			}
+		public rotinaPartidas(Gaia g) {
+			this.Gaia = g;
 		}
 		
 		public void run() {
-			String resposta 			= "";
-			String ip 					= sock.getInetAddress().getHostAddress();
-			String nick					= null;
-			String jogChave				= null;
-			int port					= 0;
-			
-			try {
-				while((resposta = reader.readLine()) != null) {
-					System.out.println("[" + Utils.dataHora() + "] Comando recebido de "+ip+": "+resposta);
-					HashMap<String, String> VARS 	= Utils.tratar(super.C.decrypt(resposta));
-					String 	output					= "";
-					
-					if(VARS.get("t") != null && VARS.get("a") != null) {
-						switch(VARS.get("t")) {
-							case "server":
-								// Comandos  enviados pelos Servidores SA-MP
-								output = ServidorSamp.filtrar(VARS, sock);
-							break;
-							/** *********************************************************************************************************************************************** **/
-							case "cliente":
-								// Comandos enviado pelos Clientes Java
-					            output = Cliente.filtrar(VARS, sock);
-					            
-					            JogadorVars jog = Servidor.jogadoresConectados.get(VARS.get("c"));
-					            if(jog != null) {
-					            	nick 		= jog.NICK;
-					            	jogChave 	= jog.chave;
-					            }
-				            break;
-						}
-					}
-					
-					if(output != null && output.length() > 0) {
-						writer.println(super.C.encrypt(output));
-						writer.flush();
-						
-						System.out.println("[" + Utils.dataHora() + "] Comando enviado para "+ip+": "+output);
-					}
-				}
-			} catch (Exception e) {
-				//e.printStackTrace();
-				
-				if(nick != null) {
-					System.out.println("Conexão perdida com o cliente "+ip+" ("+nick+")");
-					
+			timer.schedule(new TimerTask() {
+				@Override
+				public void run() {
 					try {
-						Servidor.desconectarJogador(jogChave);
-					} catch (SQLException | IOException e1) {
-						System.out.println("Não foi possível deslogar o jogador "+nick+".");
+						formarPartidas("x1", Gaia);
+						formarPartidas("x3", Gaia);
+						formarPartidas("x5", Gaia);
+					} catch (SQLException | IOException e) {
+						e.printStackTrace();
 					}
-				} else if(Servidor.servidoresConectados.get(ip+":"+port) != null) {
-					System.out.println("Conexão perdida com o servidor "+ip+":"+port);
-					Servidor.desconectarServidor(ip+":"+port);
 				}
-				
-				try {
-					sock.close();
-				} catch (IOException e1) {
-
-				}
-			}
+			}, 10*1000);
 		}
 	}
 	
-	public boolean formarPartidas(String modo) throws SQLException, IOException {
+	public boolean formarPartidas(String modo, Gaia Gaia) throws SQLException, IOException {
+		System.out.println("Formando partidas "+ modo);
+		
 		ResultSet query, query2;
 		boolean partidaFormada 	= false;
 		int servidorJogando 	= 0;
 		String servidorIP		= null;
 		
-		query2 = Dao.query("SELECT * FROM competitivo_servers WHERE STATUS = 1", new String[] {});
+		query2 = Gaia.Dao.query("SELECT * FROM competitivo_servers WHERE STATUS = 1", null);
 		
 		if(query2.next()) {
 			List<String> jogadores = new ArrayList<String>();
 			String[] jogadoresArray = new String[Servidor.jogadoresConectados.size()];
 			
-			query = Dao.query("SELECT * FROM competitivo_fila F, competitivo_contas C WHERE F.MODO = ? AND F.NICK = C.NICK ORDER BY TIMESTAMP DESC", new String[] {modo});
+			query = Gaia.Dao.query("SELECT * FROM competitivo_fila F, competitivo_contas C WHERE F.MODO = ? AND F.NICK = C.NICK ORDER BY TIMESTAMP DESC", new String[] {modo});
 			
 			Matcher r 	= (Pattern.compile("x(\\d+)")).matcher(modo);
 			r.find();
@@ -204,7 +137,7 @@ public class Gaia {
 			
 			int j = 0;
 			while(query.next()) {
-				JogadorVars jog = Servidor.jogadoresConectados.get(query.getString("CHAVE_AUTH"));
+				JogadorVars jog = Gaia.Servidor.jogadoresConectados.get(query.getString("CHAVE_AUTH"));
 				
 				if(jog != null) {
 					jogadoresArray[j] = jog.NICK+"|"+jog.chave;
@@ -213,12 +146,12 @@ public class Gaia {
 					
 					jogadores.add(jog.chave);
 					
-					if(/*j == n && */1 == 1) {
-						if(partidas.get(query2.getInt("ID")) != null) {
-							partidas.remove(query2.getInt("ID"));
+					if(j == n && 1 == 1) {
+						if(Gaia.partidas.get(query2.getInt("ID")) != null) {
+							Gaia.partidas.remove(query2.getInt("ID"));
 						}
 						
-						partidas.put(query2.getInt("ID"), new HashMap<String, PartidaVars>());
+						Gaia.partidas.put(query2.getInt("ID"), new HashMap<String, PartidaVars>());
 						
 						String timeA = "";
 						String timeB = "";
@@ -230,19 +163,19 @@ public class Gaia {
 						Iterator<String> i = jogadores.iterator();
 						int h = 0;
 						while(i.hasNext()) {
-							jog = Servidor.jogadoresConectados.get(i.next());
+							jog = Gaia.Servidor.jogadoresConectados.get(i.next());
 
 							if(++h % 2 != 0) { // Time A
 								timeA += jog.NICK + "\n";
-								partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeA"));
+								Gaia.partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeA"));
 								jog.time = 0;
 							} else { // Time B
 								timeB += jog.NICK + "\n";
-								partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeB"));
+								Gaia.partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeB"));
 								jog.time = 1;
 							}
 							
-							Dao.query("DELETE FROM competitivo_fila WHERE NICK = ?", new String[] {jog.NICK});
+							Gaia.Dao.query("DELETE FROM competitivo_fila WHERE NICK = ?", new String[] {jog.NICK});
 							jog.STATUS = "em_jogo";
 							jog.servidorJogando = servidorJogando;
 							jog.servidorIP		= servidorIP;
@@ -252,19 +185,19 @@ public class Gaia {
 								jogadoresLista[jogadoresLista.length - 1] = u.split("\\|")[0];
 							}
 							
-							Servidor.enviarParaCliente(jog.sock, Utils.json.toJson(Utils.tratar("funcao=partidaFormada&jogadores="+ Utils.implodeArray(jogadoresLista, ",") + "&partidaid="+servidorJogando+"&NICK="+jog.NICK)));
+							Gaia.Servidor.enviarParaCliente(jog.sock, Gaia.Utils.json.toJson(Utils.tratar("funcao=partidaFormada&jogadores="+ Gaia.Utils.implodeArray(jogadoresLista, ",") + "&partidaid="+servidorJogando+"&NICK="+jog.NICK)));
 						}
 						
-						ServerVars servidorUtilizado 			= Servidor.servidoresConectados.get(query2.getString("IP")+":"+query2.getString("PORTA"));
+						ServerVars servidorUtilizado 			= Gaia.Servidor.servidoresConectados.get(query2.getString("IP")+":"+query2.getString("PORTA"));
 						servidorUtilizado.STATUS 				= 2;
 						servidorUtilizado.JOGADORES_CONECTADOS 	= j;
-						servidorUtilizado.JOGADORES_LISTA 		= Utils.implodeArray(jogadoresArray, ",");
+						servidorUtilizado.JOGADORES_LISTA 		= Gaia.Utils.implodeArray(jogadoresArray, ",");
 						
-						Servidor.enviarParaServidor(servidorUtilizado.IP + ":" + servidorUtilizado.PORT, "a=TJ&LA="+timeA.replaceAll("\n", ",")+"&LB="+timeB.replaceAll("\n", ",")+"&PT="+(n/2));
+						Gaia.Servidor.enviarParaServidor(servidorUtilizado.IP + ":" + servidorUtilizado.PORT, "a=TJ&LA="+timeA.replaceAll("\n", ",")+"&LB="+timeB.replaceAll("\n", ",")+"&PT="+(n/2));
 						
-						Dao.query("UPDATE competitivo_servers SET STATUS = 2, TIME1_PLAYERS = ?, TIME2_PLAYERS = ?, PARTIDA_TIPO = ? WHERE ID = ?", new String[] {timeA, timeB, modo, query2.getInt("ID") + ""});
+						Gaia.Dao.query("UPDATE competitivo_servers SET STATUS = 2, TIME1_PLAYERS = ?, TIME2_PLAYERS = ?, PARTIDA_TIPO = ? WHERE ID = ?", new String[] {timeA, timeB, modo, query2.getInt("ID") + ""});
 
-						Servidor.propagarServidores();
+						Gaia.Servidor.propagarServidores();
 						
 						partidaFormada = true;
 						

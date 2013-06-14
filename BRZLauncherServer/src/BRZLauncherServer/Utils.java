@@ -39,7 +39,7 @@ public class Utils extends Gaia {
 		for(int i = 0; i < vars.length; ++i) {
 			if(vars[i].indexOf("=") != -1) {
 				indVal = vars[i].split("=");
-				GET.put(indVal[0], indVal[1]);
+				GET.put(indVal[0], encodeURIComponent(indVal[1]));
 			}
 		}
 		
@@ -138,6 +138,8 @@ public class Utils extends Gaia {
 	    private final byte[] keyValue = new byte[] {'p','@','P','@','D','0','p','0','L','1','s','0','0','0','1','9'};
 
 		public String encrypt(String Data) throws Exception {
+				if(Data != null) return Data;
+			
 		        Key key = generateKey();
 		        Cipher c = Cipher.getInstance(ALGO);
 		        c.init(Cipher.ENCRYPT_MODE, key);
@@ -147,6 +149,8 @@ public class Utils extends Gaia {
 		    }
 	
 		    public String decrypt(String encryptedData) throws Exception {
+		    	if(encryptedData != null) return encryptedData;
+		    	
 		        Key key = generateKey();
 		        Cipher c = Cipher.getInstance(ALGO);
 		        c.init(Cipher.DECRYPT_MODE, key);

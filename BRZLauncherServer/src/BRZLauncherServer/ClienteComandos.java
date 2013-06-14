@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import BRZLauncherServer.Gaia.rotinaPartidas;
 import BRZLauncherServer.Variaveis.ApiRespVars;
 import BRZLauncherServer.Variaveis.JogadorVars;
 import BRZLauncherServer.Variaveis.PartidaVars;
@@ -146,12 +147,22 @@ public class ClienteComandos extends Gaia {
 		                             */
 		                            query = this.Gaia.Dao.query("SELECT * FROM competitivo_servers WHERE STATUS = 1", new String[] {});
 		                            if(!query.next()) {
-		                            	this.Gaia.Servidor.enviarParaCliente(jog.sock, this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=abrirServidor")));
+		                            	this.Gaia.Servidor.verificarServidoresOficiais();
+		                            	
+		                            	/**
+		                            	 * Envia comando para o próprio jogador abrir seu servidor
+		                            	 * em testes ficou constatado que para abrir um servidor o jogador também precisa abrir a porta 7777 em seu computador
+		                            	 * então essa função ficou descontinuada, mas continua funcionando, logicamente apenas caso a porta 7777 esteja aberta
+		                            	 * no computador do jogador.
+		                            	 */
+		                            	//this.Gaia.Servidor.enviarParaCliente(jog.sock, this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=abrirServidor")));
 		                            }
 		                            
 		                            this.Gaia.Servidor.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=inserir&NICK="+nick+"&STATUS="+this.Gaia.Servidor.jogadoresConectados.get(chave).STATUS)), null);
 		                            
 		                            output = this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=filaStatus&MENSAGEM=Aguardando formação de partida..."));
+		                            
+		                            new Thread(this.Gaia.new rotinaPartidas(this)).start();
 	                    		} else {
 	                    			this.Gaia.Servidor.enviarParaCliente(jog.sock, this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=emPunicao&puniAte="+(jog.bd_punicao - timestamp))));
 	                    		}
@@ -160,6 +171,7 @@ public class ClienteComandos extends Gaia {
 	                    case "sairFila":			                        	
 	                    	this.Gaia.Dao.query("DELETE FROM competitivo_fila WHERE NICK=?", new String[] {nick});
 	                        jog.STATUS = "logado";
+	                        this.Gaia.Servidor.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=inserir&NICK="+jog.NICK+"&STATUS="+jog.STATUS)), null);
 	                    break;
 	                    case "sairPartida":
 	                    	jog.STATUS 	= "logado";

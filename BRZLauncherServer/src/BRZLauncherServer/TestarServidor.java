@@ -21,11 +21,11 @@ public class TestarServidor extends ServidorJava implements Runnable {
 
 	
 	public void run() {
-		try {	        
-        	new Socket(ip, Integer.valueOf(porta));
-        	enviarParaCliente(sock, Utils.json.toJson(Utils.tratar("funcao=testarServidorSAMPSucesso")));
-        } catch (IOException e) {
-        	enviarParaCliente(sock, Utils.json.toJson(Utils.tratar("funcao=testarServidorSAMPFalha")));
-        }
+//		try {	        
+//        	new Socket(ip, Integer.valueOf(porta));
+//        	enviarParaCliente(sock, Utils.json.toJson(Utils.tratar("funcao=testarServidorSAMPSucesso")));
+//        } catch (IOException e) {
+//        	enviarParaCliente(sock, Utils.json.toJson(Utils.tratar("funcao=testarServidorSAMPFalha")));
+//        }
 	}
 }

@@ -1,12 +1,18 @@
 package BRZLauncherServer;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -17,7 +23,7 @@ import java.util.zip.ZipInputStream;
 import BRZLauncherServer.Variaveis.JogadorVars;
 import BRZLauncherServer.Variaveis.ServerVars;
 
-public class ServidorJava extends Gaia {
+public class ServidorJava {
 	// Referência da class principal
 	private Gaia Gaia = null;
 		
@@ -29,13 +35,42 @@ public class ServidorJava extends Gaia {
 		this.Gaia = g;
 	}
 	
-	public boolean abrirNovoServidor() {
-    	try {
-    		String serverNome = this.Gaia.Utils.GerarString(3, 5, false);
-    		
-	    	InputStream servidorPath = BRZLauncherServer.class.getResourceAsStream("resources/Servidor/servidor.zip");
+	private class abrirServidorOficial implements Runnable {
+		private String caminho 	= null;
+		private Gaia Gaia 		= null;
+		
+		public abrirServidorOficial(String caminho, Gaia g) {
+			this.caminho 	= caminho;
+			this.Gaia 		= g;
+		}
+		
+		public void run() {
+			try {
+				//Process child = Runtime.getRuntime().exec("which cd "+this.caminho+"; nohup ./samp03svr &");
+				//System.out.println("which cd "+this.caminho+"; nohup ./samp03svr &");
+				
 
-	    	File unzipDestinationDirectory = new File(this.Gaia.Utils.tempFolder);
+				Process proc = Runtime.getRuntime().exec("nohup "+caminho+"restart.sh &");
+					
+				this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 1 WHERE CAMINHO = ?", new String[] {this.caminho});
+				System.out.println("Servidor aberto");
+				proc.waitFor();
+				System.out.println("Servidor fechado");
+				this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 0 WHERE CAMINHO = ?", new String[] {this.caminho});
+			} catch (InterruptedException | IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private String extrairServidorOficial(int porta) {
+		try {
+    		String serverNome 	= this.Gaia.Utils.GerarString(3, 5, false);
+    		String destPath 	= "/home/brazucas/samp/Competitivo/Servers/"+serverNome+"_"+porta+"/";
+    		
+	    	InputStream servidorPath = BRZLauncherServer.class.getResourceAsStream("resources/servidor.zip");
+
+	    	File unzipDestinationDirectory = new File(destPath);
 	    	unzipDestinationDirectory.deleteOnExit();
 	    	
 	    	ZipInputStream zipFile = new ZipInputStream(servidorPath);
@@ -45,7 +80,7 @@ public class ServidorJava extends Gaia {
 	    	while((entry = zipFile.getNextEntry()) != null) {
 	    		String currentEntry = entry.getName();
 	    		// System.getProperty("java.io.tmpdir")  "/home/brazucas/samp/Competitivo/Servers/"+serverNome
-	    		File destFile = new File("/home/brazucas/samp/Competitivo/Servers/"+serverNome, currentEntry);
+	    		File destFile = new File(destPath, currentEntry);
 	    		File destinationParent = destFile.getParentFile();
 	    		destinationParent.mkdirs();
 
@@ -56,6 +91,10 @@ public class ServidorJava extends Gaia {
 	                int len = 0;
 	                
 	                while ((len = zipFile.read(buffer)) > 0) {
+	                	if((new String(buffer).indexOf("7777")) != -1) {
+	                		buffer = new String(buffer).replace("7777", porta+"").getBytes();
+	                	}
+	                	
 	                	dest.write(buffer, 0, len);
 	                }
 	    			
@@ -66,10 +105,68 @@ public class ServidorJava extends Gaia {
 	    	}
 	    	
 	    	zipFile.close();
+	    	
+	    	// Criar script para reiniciar o servidor
+	    	String txt = ""
+	    			+"#!/bin/sh\n"
+	    			+"log=samp.log\n"
+	    			+"dat=`date`\n"
+	    			+"samp=\""+destPath+"samp03svr\"\n"
+	    			+"cd "+destPath+"\n"
+	    			+"\n"
+	    			+"while true; do\n"
+	    			+"        mv "+destPath+"server_log.txt\n"
+	    			+destPath+"logs/server_log.`date '+%m%d%y%H%M%S'`\n"
+	    			+"        ${samp} >> $log\n"
+	    			+"        sleep 2\n"
+	    			+"done";
+
+	    	File f = new File(destPath, "restart.sh");
+	    	
+	    	FileWriter fw = new FileWriter(f.getAbsoluteFile());
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write(txt);
+			bw.close();
+	    	
+	    	Runtime.getRuntime().exec("chmod -R 777 "+destPath);
+	    	
+	    	this.Gaia.Dao.query("INSERT INTO competitivo_servers_oficiais(PORTA, CAMINHO) VALUES(?, ?)", new String[] {porta+"", destPath});
+	    	
+	    	return destPath;
     	} catch (IOException e) {
     		e.printStackTrace();
+    		return null;
     	}
-    	
+	}
+	
+	public boolean verificarServidoresOficiais() throws SQLException {
+		ResultSet query1 = this.Gaia.Dao.query("SELECT * FROM competitivo_servers_oficiais F ORDER BY F.PORTA", null);
+		ResultSet query2 = this.Gaia.Dao.query("SELECT MAX(PORTA) S_MAIOR_PORTA, COUNT(*) S_QUANTIDADE_SERVIDORES, (SELECT COUNT(*) FROM competitivo_servers_oficiais WHERE ABERTO = 0) S_NAO_ABERTOS FROM competitivo_servers_oficiais", null);
+		
+		if(query2.next() && query2.getInt("S_NAO_ABERTOS") == 0 && query2.getInt("S_QUANTIDADE_SERVIDORES") < this.Gaia.quantidade_total_servidores) { // Caso todos os servidores já estejam abertos
+			
+			// Extrair um novo servidor e abrí-lo.
+			int porta = 0;
+			if(query2.getInt("S_MAIOR_PORTA") ==  0) {
+				porta = 7780;
+			} else {
+				porta = query2.getInt("S_MAIOR_PORTA") + 1;
+			}
+			
+			String novoServidorCaminho = this.extrairServidorOficial(porta);
+			if(novoServidorCaminho != null) {
+				new Thread(new abrirServidorOficial(novoServidorCaminho, this.Gaia)).start();
+			}
+		} else {
+			while(query1.next()) {
+				if(query2.getInt("S_NAO_ABERTOS") > 0) { // Abrir um servidor que já está extraído
+					if(query1.getInt("ABERTO") == 0) {
+						new Thread(new abrirServidorOficial(query1.getString("CAMINHO"), this.Gaia)).start();
+					}
+				}
+			}
+		}
+		
     	return true;
     }
 	
@@ -85,7 +182,7 @@ public class ServidorJava extends Gaia {
 					try {
 						Socket sock = entry.getValue().sock;
 						
-						if(sock.isConnected()) {
+						if(!sock.isClosed() && sock != null) {
 							writer = new PrintWriter(sock.getOutputStream());
 							writer.println(this.Gaia.C.encrypt(message));
 							writer.flush();
@@ -138,7 +235,7 @@ public class ServidorJava extends Gaia {
 	}
 	
 	public void fecharTodasConexoes() {
-		Iterator<Socket> it = clientOutputStreams.iterator();
+		Iterator<Socket> it = this.Gaia.clientOutputStreams.iterator();
 		while(it.hasNext()) {
 			try {
 				it.next().close();
@@ -208,9 +305,9 @@ public class ServidorJava extends Gaia {
 		JogadorVars jog = this.jogadoresConectados.get(chave);
 				
 		if(jog != null && jog.sock.isConnected()) {
-		    Dao.query("UPDATE competitivo_contas SET LOGADO=0, CHAVE_AUTH='' WHERE NICK=?", new String[] {jog.NICK});
-		    Dao.query("DELETE FROM competitivo_fila WHERE NICK=?", new String[] {jog.NICK});
-		    Dao.query("DELETE FROM competitivo_atualizacoes WHERE NICK=?", new String[] {jog.NICK});
+		    this.Gaia.Dao.query("UPDATE competitivo_contas SET LOGADO=0, CHAVE_AUTH='' WHERE NICK=?", new String[] {jog.NICK});
+		    this.Gaia.Dao.query("DELETE FROM competitivo_fila WHERE NICK=?", new String[] {jog.NICK});
+		    this.Gaia.Dao.query("DELETE FROM competitivo_atualizacoes WHERE NICK=?", new String[] {jog.NICK});
 		    
 		    enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=remover&NICK="+jog.NICK)), null);
 		    enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=chatMsg&NICK="+jog.NICK+"&TIPO=3&MENSAGEM="+this.Gaia.Utils.encodeURIComponent(jog.NICK+" saiu do chat."))), null);

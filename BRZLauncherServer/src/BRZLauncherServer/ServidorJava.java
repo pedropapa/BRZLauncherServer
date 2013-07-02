@@ -11,7 +11,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -130,7 +132,13 @@ public class ServidorJava {
 	    	
 	    	Runtime.getRuntime().exec("chmod -R 777 "+destPath);
 	    	
-	    	this.Gaia.Dao.query("INSERT INTO competitivo_servers_oficiais(PORTA, CAMINHO) VALUES(?, ?)", new String[] {porta+"", destPath});
+	    	try {
+	    		InetAddress addr = InetAddress.getLocalHost();            
+	    		
+	    		this.Gaia.Dao.query("INSERT INTO competitivo_servers_oficiais(IP, PORTA, CAMINHO) VALUES(?, ?, ?)", new String[] {addr.getHostAddress(), porta+"", destPath});
+	    	} catch (UnknownHostException e) {
+	    		e.printStackTrace();
+	    	}
 	    	
 	    	return destPath;
     	} catch (IOException e) {
@@ -142,6 +150,7 @@ public class ServidorJava {
 	public boolean verificarServidoresOficiais() throws SQLException {
 		ResultSet query1 = this.Gaia.Dao.query("SELECT * FROM competitivo_servers_oficiais F ORDER BY F.PORTA", null);
 		ResultSet query2 = this.Gaia.Dao.query("SELECT MAX(PORTA) S_MAIOR_PORTA, COUNT(*) S_QUANTIDADE_SERVIDORES, (SELECT COUNT(*) FROM competitivo_servers_oficiais WHERE ABERTO = 0) S_NAO_ABERTOS FROM competitivo_servers_oficiais", null);
+		ResultSet query3 = null;
 		
 		if(query2.next() && query2.getInt("S_NAO_ABERTOS") == 0 && query2.getInt("S_QUANTIDADE_SERVIDORES") < this.Gaia.quantidade_total_servidores) { // Caso todos os servidores já estejam abertos
 			
@@ -159,10 +168,10 @@ public class ServidorJava {
 			}
 		} else {
 			while(query1.next()) {
-				if(query2.getInt("S_NAO_ABERTOS") > 0) { // Abrir um servidor que já está extraído
-					if(query1.getInt("ABERTO") == 0) {
-						new Thread(new abrirServidorOficial(query1.getString("CAMINHO"), this.Gaia)).start();
-					}
+				query3 = this.Gaia.Dao.query("SELECT COUNT(*) N FROM competitivo_servers S WHERE S.IP = ? AND S.PORTA = ? AND STATUS = 1", new String[] {query1.getString("IP"), query1.getInt("PORTA")+""});
+				
+				if(query2.getInt("S_NAO_ABERTOS") > 0 && query3.getInt("N") == 1) { // Abrir um servidor que já está extraído
+					new Thread(new abrirServidorOficial(query1.getString("CAMINHO"), this.Gaia)).start();
 				}
 			}
 		}

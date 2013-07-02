@@ -173,6 +173,9 @@ public class ServidorSampComandos extends Gaia {
 								}
 							}
 						break;
+						case "inicioPartida":
+							Gaia.Dao.query("UPDATE competitivo_servers SET STATUS = 3 WHERE IP = ?, PORTA = ?", new String[] {ip, port+""});
+						break;
 	                }
 				}
 		}

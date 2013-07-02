@@ -92,7 +92,7 @@ public class Gaia {
 		}
 	}
 	
-	public class rotinaPartidas extends Gaia implements Runnable {
+	public class rotinaPartidas implements Runnable {
 		private Gaia Gaia = null;
 		
 		public rotinaPartidas(Gaia g) {
@@ -146,7 +146,7 @@ public class Gaia {
 					
 					jogadores.add(jog.chave);
 					
-					if(j == n && 1 == 1) {
+					if(/*j == n && */1 == 1) {
 						if(Gaia.partidas.get(query2.getInt("ID")) != null) {
 							Gaia.partidas.remove(query2.getInt("ID"));
 						}
@@ -195,6 +195,7 @@ public class Gaia {
 						
 						Gaia.Servidor.enviarParaServidor(servidorUtilizado.IP + ":" + servidorUtilizado.PORT, "a=TJ&LA="+timeA.replaceAll("\n", ",")+"&LB="+timeB.replaceAll("\n", ",")+"&PT="+(n/2));
 						
+						// Altera o status do servidor para "partida formada" e outras variáveis.
 						Gaia.Dao.query("UPDATE competitivo_servers SET STATUS = 2, TIME1_PLAYERS = ?, TIME2_PLAYERS = ?, PARTIDA_TIPO = ? WHERE ID = ?", new String[] {timeA, timeB, modo, query2.getInt("ID") + ""});
 
 						Gaia.Servidor.propagarServidores();

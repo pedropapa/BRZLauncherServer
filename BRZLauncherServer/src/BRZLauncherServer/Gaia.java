@@ -40,6 +40,7 @@ public class Gaia {
 	public String DigitalOcean_clientId									= "iaCzvk978IthbxOotLr1l";
 	public String DigitalOcean_apiKey									= "ZcsNAkxd3qymQz0OrDrZGncrNjtENF2bTomkDjmpw";
 	public String DigitalOcean_urlApi									= "https://api.digitalocean.com/%s/?client_id="+DigitalOcean_clientId+"&api_key="+DigitalOcean_apiKey;
+	public String masterIP												= null;
 	
 	// Constantes
 	public int quantidade_total_servidores = 20;
@@ -55,6 +56,8 @@ public class Gaia {
 	}
 	
 	public void go() {
+		//new Thread(this.Servidor.new sincronizarServidoresProcessos()).start();
+		
 		Dao.query("UPDATE competitivo_contas SET LOGADO = 0", null);
 		Dao.query("DELETE FROM competitivo_fila", null);
 		Dao.query("DELETE FROM competitivo_servers", null);
@@ -162,9 +165,10 @@ public class Gaia {
 							
 						Iterator<String> i = jogadores.iterator();
 						int h = 0;
+						System.out.println("debug1");
 						while(i.hasNext()) {
 							jog = Gaia.Servidor.jogadoresConectados.get(i.next());
-
+							System.out.println(jog.NICK);
 							if(++h % 2 != 0) { // Time A
 								timeA += jog.NICK + "\n";
 								Gaia.partidas.get(query2.getInt("ID")).put(jog.chave, new PartidaVars("TimeA"));
@@ -206,6 +210,8 @@ public class Gaia {
 					}
 				}
 			}
+		} else {
+			Gaia.Servidor.verificarServidoresOficiais();
 		}
 		
 		return partidaFormada;

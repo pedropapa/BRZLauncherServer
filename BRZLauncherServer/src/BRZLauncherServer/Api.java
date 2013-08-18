@@ -42,5 +42,20 @@ public class Api extends Gaia {
 	public void atualizarMasterIP() throws IOException {
 		System.out.println("Atualizando IP do servidor principal na API...");
 		((new URL(this.brzUrlAPI+"a=updateMasterIp")).openStream()).close();
+		
+		URL oracle 			= new URL(this.brzUrlAPI+"a=updateMasterIp");
+        URLConnection yc 	= oracle.openConnection();
+        BufferedReader in 	= new BufferedReader(new InputStreamReader(yc.getInputStream()));
+        
+        String inputLine;
+        String IP = "";
+        
+        while ((inputLine = in.readLine()) != null) {
+            IP += inputLine;
+        }
+        
+        in.close();
+        
+        this.Gaia.masterIP = IP;
 	}
 }

@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
-import BRZLauncherServer.Gaia.rotinaPartidas;
 import BRZLauncherServer.Variaveis.ApiRespVars;
 import BRZLauncherServer.Variaveis.JogadorVars;
 import BRZLauncherServer.Variaveis.PartidaVars;
@@ -137,7 +136,7 @@ public class ClienteComandos extends Gaia {
 		                            }
 		                            
 		                            this.Gaia.Dao.query("INSERT INTO competitivo_fila(NICK, MODO) VALUES(?, ?)", new String[] {nick, modo});
-		                            
+
 		                            jog.STATUS 	= "em_fila";
 		                            jog.modo 	= modo;
 		                            
@@ -145,7 +144,9 @@ public class ClienteComandos extends Gaia {
 		                             * TODO
 		                             * Faz com que o jogador crie um servidor caso não haja servidores disponíveis 
 		                             */
+		                            
 		                            query = this.Gaia.Dao.query("SELECT * FROM competitivo_servers WHERE STATUS = 1", new String[] {});
+
 		                            if(!query.next()) {
 		                            	this.Gaia.Servidor.verificarServidoresOficiais();
 		                            	
@@ -161,8 +162,7 @@ public class ClienteComandos extends Gaia {
 		                            this.Gaia.Servidor.enviarParaTodosClientes(this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=atulLogados&ACAO=inserir&NICK="+nick+"&STATUS="+this.Gaia.Servidor.jogadoresConectados.get(chave).STATUS)), null);
 		                            
 		                            output = this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=filaStatus&MENSAGEM=Aguardando formação de partida..."));
-		                            
-		                            new Thread(this.Gaia.new rotinaPartidas(this)).start();
+		                            new Thread(this.Gaia.new rotinaPartidas(this.Gaia)).start();
 	                    		} else {
 	                    			this.Gaia.Servidor.enviarParaCliente(jog.sock, this.Gaia.Utils.json.toJson(this.Gaia.Utils.tratar("funcao=emPunicao&puniAte="+(jog.bd_punicao - timestamp))));
 	                    		}

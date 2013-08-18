@@ -9,7 +9,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -37,6 +36,25 @@ public class ServidorJava {
 		this.Gaia = g;
 	}
 	
+	public class sincronizarServidoresProcessos implements Runnable {
+		public void run() {
+			try {
+				Process proc = Runtime.getRuntime().exec("top -b -n 1 | grep samp");
+				BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+				    
+	            String line = reader.readLine();
+	            while (line != null) {
+	                System.out.println(line+" cu");
+	                line = reader.readLine();
+	            }
+	            
+	            reader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	private class abrirServidorOficial implements Runnable {
 		private String caminho 	= null;
 		private Gaia Gaia 		= null;
@@ -51,14 +69,24 @@ public class ServidorJava {
 				//Process child = Runtime.getRuntime().exec("which cd "+this.caminho+"; nohup ./samp03svr &");
 				//System.out.println("which cd "+this.caminho+"; nohup ./samp03svr &");
 				
-
-				Process proc = Runtime.getRuntime().exec("nohup "+caminho+"restart.sh &");
+				File executavel = new File(caminho+"start.sh");
+				
+				if(executavel.exists()) {
+					Process proc = Runtime.getRuntime().exec("nohup "+caminho+"start.sh &");
+	
+					this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 1 WHERE CAMINHO = ?", new String[] {this.caminho});
+					System.out.println("Servidor aberto");
 					
-				this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 1 WHERE CAMINHO = ?", new String[] {this.caminho});
-				System.out.println("Servidor aberto");
-				proc.waitFor();
-				System.out.println("Servidor fechado");
-				this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 0 WHERE CAMINHO = ?", new String[] {this.caminho});
+					new Thread(new sincronizarServidoresProcessos()).start();
+					
+					proc.waitFor();
+					System.out.println("Servidor fechado");
+					this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 0 WHERE CAMINHO = ?", new String[] {this.caminho});
+					
+					new Thread(new sincronizarServidoresProcessos()).start();
+				} else {
+					this.Gaia.Dao.query("DELETE FROM competitivo_servers_oficiais WHERE CAMINHO = ?", new String[] {this.caminho});
+				}
 			} catch (InterruptedException | IOException e) {
 				e.printStackTrace();
 			}
@@ -109,6 +137,20 @@ public class ServidorJava {
 	    	zipFile.close();
 	    	
 	    	// Criar script para reiniciar o servidor
+//	    	String txt = ""
+//	    			+"#!/bin/sh\n"
+//	    			+"log=samp.log\n"
+//	    			+"dat=`date`\n"
+//	    			+"samp=\""+destPath+"samp03svr\"\n"
+//	    			+"cd "+destPath+"\n"
+//	    			+"\n"
+//	    			+"while true; do\n"
+//	    			+"        mv "+destPath+"server_log.txt\n"
+//	    			+destPath+"logs/server_log.`date '+%m%d%y%H%M%S'`\n"
+//	    			+"        ${samp} >> $log\n"
+//	    			+"        sleep 2\n"
+//	    			+"done";
+	    	
 	    	String txt = ""
 	    			+"#!/bin/sh\n"
 	    			+"log=samp.log\n"
@@ -116,14 +158,11 @@ public class ServidorJava {
 	    			+"samp=\""+destPath+"samp03svr\"\n"
 	    			+"cd "+destPath+"\n"
 	    			+"\n"
-	    			+"while true; do\n"
-	    			+"        mv "+destPath+"server_log.txt\n"
+	    			+"mv "+destPath+"server_log.txt\n"
 	    			+destPath+"logs/server_log.`date '+%m%d%y%H%M%S'`\n"
-	    			+"        ${samp} >> $log\n"
-	    			+"        sleep 2\n"
-	    			+"done";
+	    			+"${samp} >> $log\n";
 
-	    	File f = new File(destPath, "restart.sh");
+	    	File f = new File(destPath, "start.sh");
 	    	
 	    	FileWriter fw = new FileWriter(f.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
@@ -132,13 +171,7 @@ public class ServidorJava {
 	    	
 	    	Runtime.getRuntime().exec("chmod -R 777 "+destPath);
 	    	
-	    	try {
-	    		InetAddress addr = InetAddress.getLocalHost();            
-	    		
-	    		this.Gaia.Dao.query("INSERT INTO competitivo_servers_oficiais(IP, PORTA, CAMINHO) VALUES(?, ?, ?)", new String[] {addr.getHostAddress(), porta+"", destPath});
-	    	} catch (UnknownHostException e) {
-	    		e.printStackTrace();
-	    	}
+	    	this.Gaia.Dao.query("INSERT INTO competitivo_servers_oficiais(IP, PORTA, CAMINHO, STATUS) VALUES(?, ?, ?, 0)", new String[] {this.Gaia.masterIP, porta+"", destPath});
 	    	
 	    	return destPath;
     	} catch (IOException e) {
@@ -149,11 +182,10 @@ public class ServidorJava {
 	
 	public boolean verificarServidoresOficiais() throws SQLException {
 		ResultSet query1 = this.Gaia.Dao.query("SELECT * FROM competitivo_servers_oficiais F ORDER BY F.PORTA", null);
-		ResultSet query2 = this.Gaia.Dao.query("SELECT MAX(PORTA) S_MAIOR_PORTA, COUNT(*) S_QUANTIDADE_SERVIDORES, (SELECT COUNT(*) FROM competitivo_servers_oficiais WHERE ABERTO = 0) S_NAO_ABERTOS FROM competitivo_servers_oficiais", null);
+		ResultSet query2 = this.Gaia.Dao.query("SELECT MAX(PORTA) S_MAIOR_PORTA, COUNT(*) S_QUANTIDADE_SERVIDORES, (SELECT COUNT(*) FROM competitivo_servers_oficiais WHERE ABERTO = 0 AND STATUS = 0) S_NAO_ABERTOS FROM competitivo_servers_oficiais", null);
 		ResultSet query3 = null;
-		
+
 		if(query2.next() && query2.getInt("S_NAO_ABERTOS") == 0 && query2.getInt("S_QUANTIDADE_SERVIDORES") < this.Gaia.quantidade_total_servidores) { // Caso todos os servidores já estejam abertos
-			
 			// Extrair um novo servidor e abrí-lo.
 			int porta = 0;
 			if(query2.getInt("S_MAIOR_PORTA") ==  0) {
@@ -161,7 +193,7 @@ public class ServidorJava {
 			} else {
 				porta = query2.getInt("S_MAIOR_PORTA") + 1;
 			}
-			
+
 			String novoServidorCaminho = this.extrairServidorOficial(porta);
 			if(novoServidorCaminho != null) {
 				new Thread(new abrirServidorOficial(novoServidorCaminho, this.Gaia)).start();
@@ -169,8 +201,8 @@ public class ServidorJava {
 		} else {
 			while(query1.next()) {
 				query3 = this.Gaia.Dao.query("SELECT COUNT(*) N FROM competitivo_servers S WHERE S.IP = ? AND S.PORTA = ? AND STATUS = 1", new String[] {query1.getString("IP"), query1.getInt("PORTA")+""});
-				
-				if(query2.getInt("S_NAO_ABERTOS") > 0 && query3.getInt("N") == 1) { // Abrir um servidor que já está extraído
+
+				if(query3.next() && query3.getInt("N") == 0) { // Abrir um servidor que já está extraído
 					new Thread(new abrirServidorOficial(query1.getString("CAMINHO"), this.Gaia)).start();
 				}
 			}
@@ -282,10 +314,11 @@ public class ServidorJava {
 				this.propagarServidores();
 			}
 			
+			this.Gaia.Dao.query("UPDATE competitivo_servers_oficiais SET ABERTO = 0 WHERE IP = ? AND PORTA = ?", new String[] {serverInfo.IP, serverInfo.PORT+""});
 			this.Gaia.Dao.query("DELETE FROM competitivo_servers WHERE IP=? AND PORTA=?", new String[] {serverInfo.IP, serverInfo.PORT+""});
-			 this.servidoresConectados.remove(ip);
+			this.servidoresConectados.remove(ip);
 			 
-			 this.propagarServidores();
+			this.propagarServidores();
 		}
 	}
 	
